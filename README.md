@@ -1,25 +1,9 @@
 # unified-memory-microbench
 
-### For help
+## Building on Power9 with gcc 4.8.5
 
-`./triad -h`
+cmake .. -DCMAKE_TOOLCHAIN_FILE=`readlink -f ../toolchains/clang.toolchain`
 
-### To skip the system allocator (on systems without ATS)
+## Building with a gcc that has std::regex
 
-`./triad --no-system`
-
-### To do multiple sizes
-
-`./triad -g 1 -g 2`
-
-### To do multiple iterations
-
-`./triad -n 6`
-
-### To cause tee to output right away
-
-`stdbuf -o 0 ./triad | tee triad.csv`
-
-### To throw away stderr
-
-`./triad 2>/dev/null`
+cmake ..
