@@ -378,7 +378,7 @@ int main(int argc, char **argv) {
     if (!disableSystemAllocator) {
       results =
           run_many(iters, std::bind(benchmark_naive<int>, n, SYSTEM, NONE));
-      printf("%.2e%s%s", (double)n, sep.c_str(), "system          ");
+      printf("%.2e%s%s", (double)n, sep.c_str(), "system            ");
       print_results(results, sep);
     }
 
