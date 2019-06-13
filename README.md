@@ -45,27 +45,12 @@ Show output on terminal and also pipe to `triad.csv`.
 `./triad -h`
 
 ## Automatic Testing for Functional System Allocator
-* Forks a child process to test whether CUDA can use the system allocator.
+Forks a child process to test whether CUDA can use the system allocator.
 If CUDA cannot, this causes a sticky error that permanently damages the CUDA context, so we use a child process to fully isolate the context so it can be completely destroyed.
 The child process needs to be create before the parent does *any* CUDA activity at all.
 
 The test is done in [test_system_allocator.cu](test_system_allocator.cu)
 
-## Building on Power9 with gcc 4.8.5
-
-GCC 4.8.5 doesn't have a working std::regex (used for cxxopts), so install a supported version of clang
-
-|CUDA | Clang | Installer |
-|-|-|-|
-| 9.2  | 5.0.0 | https://gist.github.com/cwpearson/c5521dfc50175b1d977643b2fc5a2bb1 |
-| 10.1 | 8.0.0 | https://gist.github.com/cwpearson/fc91b92c3d49d75a1b3a559aacb1d38e |
-
-Then, build and tell CMake to use clang for everything
-
-```
-mkdir build && cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=`readlink -f ../toolchains/clang.toolchain`
-```
 
 ## Building with a gcc that has std::regex
 
@@ -73,3 +58,23 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=`readlink -f ../toolchains/clang.toolchain`
 mkdir build && cd build
 cmake ..
 ```
+
+## Building on Power9 with gcc 4.8.5
+
+GCC 4.8.5 doesn't have a working std::regex (used for cxxopts), so install a supported version of clang.
+GCC 4.8.5 cannot build libcxx, so we use a clang without libcxx to build a clang with libcxx.
+Depending on your installed CUDA, you'll need a different version of clang.
+
+| CUDA | Clang | Installer |
+|-|-|-|
+| 9.2  | 5.0.0 | https://gist.github.com/cwpearson/c5521dfc50175b1d977643b2fc5a2bb1 |
+| 10.1 | 8.0.0 | https://gist.github.com/cwpearson/fc91b92c3d49d75a1b3a559aacb1d38e |
+
+Add the clang to your path, and have CMake use clang in the build.
+
+```
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=`readlink -f ../toolchains/clang.toolchain`
+```
+
+
