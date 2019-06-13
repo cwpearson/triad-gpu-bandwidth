@@ -10,6 +10,7 @@
 
 #include "cache.hpp"
 #include "check_cuda.cuh"
+#include "test_system_allocator.hpp"
 
 struct Result {
   double kernel;
@@ -29,12 +30,14 @@ __global__ void triad_kernel(T *__restrict__ a, const T *__restrict__ b,
 
 
 
+#if 0
 // write a single int
 __global__ void write_int(int *a) {
   if (0 == blockDim.x * blockIdx.x + threadIdx.x) {
     *a = 700;
   }
 }
+
 
 bool try_system_allocator() {
   int *a = new int;
@@ -48,6 +51,7 @@ bool try_system_allocator() {
   CUDA_RUNTIME(cudaDeviceReset());
   return true;
 }
+#endif
 
 typedef enum {
   PAGEABLE,
@@ -68,7 +72,7 @@ inline Hint operator|(Hint a, Hint b) {
 }
 
 template <typename T>
-Result benchmark_naive(size_t n, AllocationType at, Hint hint) {
+Result benchmark_triad(size_t n, AllocationType at, Hint hint) {
 
   T *a_h = nullptr;
   T *b_h = nullptr;
@@ -242,26 +246,25 @@ Result benchmark_naive(size_t n, AllocationType at, Hint hint) {
   CUDA_RUNTIME(cudaEventDestroy(rxStart));
   CUDA_RUNTIME(cudaEventDestroy(rxStop));
 
-  double copyPerf =
-      1000.0 * n * sizeof(T) * 3 / (txMillis + rxMillis) / 1024 / 1024;
-  double kernelPerf = 1000.0 * n * sizeof(T) * 3 / kernelMillis / 1024 / 1024;
-  double totalPerf = 1000.0 * n * sizeof(T) * 3 / totalMillis / 1024 / 1024;
+  double copyTime = 1000 * (txMillis + rxMillis);
+  double kernelTime = 1000 * kernelMillis;
+  double totalTime = 1000 * totalMillis;
 
   // no copies in some of these
   if (at == ZERO_COPY) {
-    copyPerf = -1;
+    copyTime = 0;
   }
   if ((at == MANAGED) && (hint == NONE)) {
-    copyPerf = -1;
+    copyTime = 0;
   }
   if ((at == SYSTEM)) {
-    copyPerf = -1;
+    copyTime = 0;
   }
 
   Result result;
-  result.kernel = kernelPerf;
-  result.copy = copyPerf;
-  result.total = totalPerf;
+  result.kernel = kernelTime;
+  result.copy = copyTime;
+  result.total = totalTime;
   // printf("%f.2 %f.2 %f.2\n", copyPerf, kernelPerf, totalPerf);
   return result;
 }
@@ -300,6 +303,7 @@ template <typename T> std::vector<Result> run_many(size_t iters, T fn) {
 
 int main(int argc, char **argv) {
 
+  #if 0
   bool disableSystemAllocator;
 
   // test the system allocator in a new process
@@ -328,7 +332,7 @@ int main(int argc, char **argv) {
       }
       break;
   }
-
+#endif
 
   CUDA_RUNTIME(cudaDeviceReset());
 
@@ -352,10 +356,18 @@ int main(int argc, char **argv) {
     exit(0);
   }
 
+  bool disableSystemAllocator = false;
   if (result["no-system-allocator"].count()) {
     disableSystemAllocator = true;
   }
 
+  if (!disableSystemAllocator) {
+    bool works = test_system_allocator();
+    if (!works) {
+      fprintf(stderr, "system allocator did not work. disabling\n");
+      disableSystemAllocator = true;
+    }
+  }
 
   // print header
   std::cout << "n" << sep << "bmark";
@@ -377,42 +389,42 @@ int main(int argc, char **argv) {
     std::vector<Result> results;
     if (!disableSystemAllocator) {
       results =
-          run_many(iters, std::bind(benchmark_naive<int>, n, SYSTEM, NONE));
+          run_many(iters, std::bind(benchmark_triad<int>, n, SYSTEM, NONE));
       printf("%.2e%s%s", (double)n, sep.c_str(), "system            ");
       print_results(results, sep);
     }
 
     results =
-        run_many(iters, std::bind(benchmark_naive<int>, n, PAGEABLE, NONE));
+        run_many(iters, std::bind(benchmark_triad<int>, n, PAGEABLE, NONE));
     printf("%.2e%s%s", (double)n, sep.c_str(), "pageable          ");
     print_results(results, sep);
 
-    results = run_many(iters, std::bind(benchmark_naive<int>, n, PINNED, NONE));
+    results = run_many(iters, std::bind(benchmark_triad<int>, n, PINNED, NONE));
     printf("%.2e%s%s", (double)n, sep.c_str(), "pinned            ");
     print_results(results, sep);
 
     results =
-        run_many(iters, std::bind(benchmark_naive<int>, n, ZERO_COPY, NONE));
+        run_many(iters, std::bind(benchmark_triad<int>, n, ZERO_COPY, NONE));
     printf("%.2e%s%s", (double)n, sep.c_str(), "zero-copy         ");
     print_results(results, sep);
 
     results =
-        run_many(iters, std::bind(benchmark_naive<int>, n, MANAGED, NONE));
+        run_many(iters, std::bind(benchmark_triad<int>, n, MANAGED, NONE));
     printf("%.2e%s%s", (double)n, sep.c_str(), "um                ");
     print_results(results, sep);
 
     results =
-        run_many(iters, std::bind(benchmark_naive<int>, n, MANAGED, ACCESS));
+        run_many(iters, std::bind(benchmark_triad<int>, n, MANAGED, ACCESS));
     printf("%.2e%s%s", (double)n, sep.c_str(), "um-access         ");
     print_results(results, sep);
 
     results =
-        run_many(iters, std::bind(benchmark_naive<int>, n, MANAGED, PREFETCH));
+        run_many(iters, std::bind(benchmark_triad<int>, n, MANAGED, PREFETCH));
     printf("%.2e%s%s", (double)n, sep.c_str(), "um-prefetch       ");
     print_results(results, sep);
 
     results = run_many(
-        iters, std::bind(benchmark_naive<int>, n, MANAGED, ACCESS | PREFETCH));
+        iters, std::bind(benchmark_triad<int>, n, MANAGED, ACCESS | PREFETCH));
     printf("%.2e%s%s", (double)n, sep.c_str(), "um-access-prefetch");
     print_results(results, sep);
   }

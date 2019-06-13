@@ -46,7 +46,7 @@ set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_EXTENSIONS OFF)
 
-add_executable(triad triad.cu cache.cu)
+add_executable(triad triad.cu cache.cu test_system_allocator.cu)
 target_link_libraries(triad PUBLIC cxxopts::cxxopts)
 
 
