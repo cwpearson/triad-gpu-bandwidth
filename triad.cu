@@ -286,9 +286,20 @@ int main(int argc, char **argv) {
   std::vector<double> gs;
   std::vector<double> ms;
 
-  options.add_options()("n,num-iters", "Number of iterations",
-                        cxxopts::value(iters))(
-      "no-system-allocator", "Disable system allocator")("h,help", "Show help");
+  // clang-format off
+  options.add_options()
+    ("n,num-iters", "Number of iterations", cxxopts::value(iters))
+    ("no-system-allocator", "Disable system allocator")
+    ("pinned", "run pinned benchmark")
+    ("pageable", "run pageable benchmark")
+    ("zero-copy", "run zero-copy benchmark")
+    ("managed", "run unified memory benchmark")
+    ("managed-access", "run unified memory benchmark with access hint")
+    ("managed-prefetch", "run unified-memory benchmark with prefetch hint")
+    ("managed-access-prefetch", "run unified-memory benchmark with access and prefetch hints")
+    ("system", "run system allocator benchmark")
+    ("h,help", "Show help");
+  // clang-format on
 
   auto result = options.parse(argc, argv);
 
@@ -302,6 +313,26 @@ int main(int argc, char **argv) {
   if (result["no-system-allocator"].count()) {
     disableSystemAllocator = true;
   }
+
+  
+  const bool run_pinned = result["pinned"].as<bool>();
+  const bool run_pageable = result["pageable"].as<bool>();
+  const bool run_zero_copy = result["zero-copy"].as<bool>();
+  const bool run_managed = result["managed"].as<bool>();
+  const bool run_managed_access = result["managed-access"].as<bool>();
+  const bool run_managed_prefetch = result["managed-prefetch"].as<bool>();
+  const bool run_managed_access_prefetch = result["managed-access-prefetch"].as<bool>();
+  const bool run_system = result["system"].as<bool>();
+
+  bool runAll = true;
+  if (run_pinned) runAll = false;
+  if (run_pageable) runAll = false;
+  if (run_zero_copy) runAll = false;
+  if (run_managed) runAll = false;
+  if (run_managed_access) runAll = false;
+  if (run_managed_prefetch) runAll = false;
+  if (run_managed_access_prefetch) runAll = false;
+  if (run_system) runAll = false;
 
   // Don't do any CUDA stuff before forking the child
   if (!disableSystemAllocator) {
@@ -332,45 +363,62 @@ int main(int argc, char **argv) {
   for (size_t n = 1e5; n <= 2.5e8; n *= 1.3) {
 
     std::vector<Result> results;
+    if (run_system || runAll) {
     if (!disableSystemAllocator) {
       results =
           run_many(iters, std::bind(benchmark_triad<int>, n, SYSTEM, NONE));
       printf("%.2e%s%s", (double)n, sep.c_str(), "system            ");
       print_results(results, sep);
     }
+  }
 
-    results =
-        run_many(iters, std::bind(benchmark_triad<int>, n, PAGEABLE, NONE));
-    printf("%.2e%s%s", (double)n, sep.c_str(), "pageable          ");
-    print_results(results, sep);
+    if (run_pageable || runAll) {
+      results =
+          run_many(iters, std::bind(benchmark_triad<int>, n, PAGEABLE, NONE));
+      printf("%.2e%s%s", (double)n, sep.c_str(), "pageable          ");
+      print_results(results, sep);
+    }
 
-    results = run_many(iters, std::bind(benchmark_triad<int>, n, PINNED, NONE));
-    printf("%.2e%s%s", (double)n, sep.c_str(), "pinned            ");
-    print_results(results, sep);
+    if (run_pinned || runAll) {
+      results =
+          run_many(iters, std::bind(benchmark_triad<int>, n, PINNED, NONE));
+      printf("%.2e%s%s", (double)n, sep.c_str(), "pinned            ");
+      print_results(results, sep);
+    }
 
+    if (run_zero_copy || runAll) {
     results =
         run_many(iters, std::bind(benchmark_triad<int>, n, ZERO_COPY, NONE));
     printf("%.2e%s%s", (double)n, sep.c_str(), "zero-copy         ");
     print_results(results, sep);
+    }
 
+    if (run_managed || runAll) {
     results =
         run_many(iters, std::bind(benchmark_triad<int>, n, MANAGED, NONE));
     printf("%.2e%s%s", (double)n, sep.c_str(), "um                ");
     print_results(results, sep);
+    }
 
+    if (run_managed_access || runAll) {
     results =
         run_many(iters, std::bind(benchmark_triad<int>, n, MANAGED, ACCESS));
     printf("%.2e%s%s", (double)n, sep.c_str(), "um-access         ");
     print_results(results, sep);
+    }
 
+    if (run_managed_prefetch || runAll) {
     results =
         run_many(iters, std::bind(benchmark_triad<int>, n, MANAGED, PREFETCH));
     printf("%.2e%s%s", (double)n, sep.c_str(), "um-prefetch       ");
     print_results(results, sep);
+    }
 
+    if (run_managed_access_prefetch || runAll) {
     results = run_many(
         iters, std::bind(benchmark_triad<int>, n, MANAGED, ACCESS | PREFETCH));
     printf("%.2e%s%s", (double)n, sep.c_str(), "um-access-prefetch");
     print_results(results, sep);
+    }
   }
 }
