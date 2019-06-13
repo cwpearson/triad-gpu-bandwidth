@@ -28,31 +28,6 @@ __global__ void triad_kernel(T *__restrict__ a, const T *__restrict__ b,
   }
 }
 
-
-
-#if 0
-// write a single int
-__global__ void write_int(int *a) {
-  if (0 == blockDim.x * blockIdx.x + threadIdx.x) {
-    *a = 700;
-  }
-}
-
-
-bool try_system_allocator() {
-  int *a = new int;
-  write_int<<<1,1>>>(a);
-  cudaError_t err = cudaDeviceSynchronize();
-  delete a;
-  if (err == cudaErrorIllegalAddress) {
-    fprintf(stderr, "got illegal address using system allocator\n");
-    return false;
-  }
-  CUDA_RUNTIME(cudaDeviceReset());
-  return true;
-}
-#endif
-
 typedef enum {
   PAGEABLE,
   PINNED,
@@ -246,9 +221,9 @@ Result benchmark_triad(size_t n, AllocationType at, Hint hint) {
   CUDA_RUNTIME(cudaEventDestroy(rxStart));
   CUDA_RUNTIME(cudaEventDestroy(rxStop));
 
-  double copyTime = 1000 * (txMillis + rxMillis);
-  double kernelTime = 1000 * kernelMillis;
-  double totalTime = 1000 * totalMillis;
+  double copyTime = (txMillis + rxMillis) / 1000;
+  double kernelTime = kernelMillis / 1000;
+  double totalTime = totalMillis / 1000;
 
   // no copies in some of these
   if (at == ZERO_COPY) {
@@ -303,39 +278,6 @@ template <typename T> std::vector<Result> run_many(size_t iters, T fn) {
 
 int main(int argc, char **argv) {
 
-  #if 0
-  bool disableSystemAllocator;
-
-  // test the system allocator in a new process
-  pid_t pid = fork(); // create child process
-  int status;
-  switch (pid)
-  {
-  case -1: // error
-      perror("fork");
-      exit(1);
-
-  case 0: // child process 
-      if (try_system_allocator()) {
-        exit(0);
-      }
-      exit(1);
-
-  default: // parent process, pid now contains the child pid
-      while (-1 == waitpid(pid, &status, 0)); // wait for child to complete
-      if (WIFSIGNALED(status) || WEXITSTATUS(status) != 0)
-      {
-          fprintf(stderr,"system allocator did not work (%d). disabling\n", status);
-          disableSystemAllocator = true;
-      } else {
-        disableSystemAllocator = false;
-      }
-      break;
-  }
-#endif
-
-  CUDA_RUNTIME(cudaDeviceReset());
-
   std::string sep = ",";
   size_t iters = 5;
 
@@ -361,6 +303,7 @@ int main(int argc, char **argv) {
     disableSystemAllocator = true;
   }
 
+  // Don't do any CUDA stuff before forking the child
   if (!disableSystemAllocator) {
     bool works = test_system_allocator();
     if (!works) {
@@ -368,6 +311,8 @@ int main(int argc, char **argv) {
       disableSystemAllocator = true;
     }
   }
+
+  CUDA_RUNTIME(cudaDeviceReset());
 
   // print header
   std::cout << "n" << sep << "bmark";

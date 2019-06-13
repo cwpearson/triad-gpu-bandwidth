@@ -29,6 +29,7 @@ bool test_system_allocator() {
   */
   case 0: // child process
   {
+    CUDA_RUNTIME(cudaDeviceReset());
     int *a = new int;
     write_int<<<1,1>>>(a);
     cudaError_t err = cudaDeviceSynchronize();
@@ -36,7 +37,7 @@ bool test_system_allocator() {
         fprintf(stderr, "got illegal address using system allocator\n");
         exit(1);
     }
-    CUDA_RUNTIME(cudaDeviceReset());
+    CUDA_RUNTIME(err);
     exit(0);
 }
 
