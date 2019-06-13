@@ -49,6 +49,8 @@ inline Hint operator|(Hint a, Hint b) {
 template <typename T>
 Result benchmark_triad(size_t n, AllocationType at, Hint hint) {
 
+  CUDA_RUNTIME(cudaDeviceReset());
+
   T *a_h = nullptr;
   T *b_h = nullptr;
   T *c_h = nullptr;
