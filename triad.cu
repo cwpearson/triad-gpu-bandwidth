@@ -294,7 +294,7 @@ int main(int argc, char **argv) {
   options.add_options()
     ("i,num-iters", "Number of iterations", cxxopts::value(iters))
     ("n","number of vector elements (single vector)", cxxopts::value<double>())
-    ("n-min", "minimum n in sweep", cxxopts::value(nMin)->default_value("1.5e5"))
+    ("n-min", "minimum n in sweep", cxxopts::value(nMin)->default_value("1.0e5"))
     ("n-max", "maximum n in sweep", cxxopts::value(nMax)->default_value("2.5e8"))
     ("n-factor", "growth of n each run", cxxopts::value(nFactor)->default_value("1.3"))
     ("pinned", "run pinned benchmark")
