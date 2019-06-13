@@ -74,7 +74,7 @@ Depending on your installed CUDA, you'll need a different version of clang.
 | CUDA | Clang | Installer |
 |-|-|-|
 | 9.2  | 5.0.0 | https://gist.github.com/cwpearson/c5521dfc50175b1d977643b2fc5a2bb1 |
-| 10.1 | 7.1.0 | https://gist.github.com/cwpearson/c13ac7c25bde8c8644300e211faf4e78 |
+| 10.1 | 5.0.0 | https://gist.github.com/cwpearson/c13ac7c25bde8c8644300e211faf4e78 |
 
 Add the clang to your path, and have CMake use clang in the build.
 
@@ -82,5 +82,5 @@ Add the clang to your path, and have CMake use clang in the build.
 mkdir build && cd build
 cmake .. -DCMAKE_TOOLCHAIN_FILE=`readlink -f ../toolchains/clang.toolchain`
 ```
-The CUDA documentation claims that clang 8.0.0 is supported for CUDA 10.1, but if you actually try it says it requires clang>=3.2 and clang<8.
+The CUDA documentation claims that clang 8.0.0 is supported for CUDA 10.1, but if you actually try it says it requires clang>=3.2 and clang<8. Clang 7.1.0 fails on CUDA 10.0.0 with some errors about `__fp16`.
 
