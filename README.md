@@ -30,7 +30,7 @@ Show output on terminal and also pipe to `triad.csv`.
 
 * Run only the `pinned` benchmark
 
-./triad --pinned
+`./triad --pinned`
 
 * Run only n = 1e9
 
