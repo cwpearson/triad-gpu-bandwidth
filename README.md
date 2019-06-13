@@ -51,6 +51,12 @@ The child process needs to be create before the parent does *any* CUDA activity 
 
 The test is done in [test_system_allocator.cu](test_system_allocator.cu)
 
+## Getting stable benchmark results
+
+It is important to do 3 things:
+1. Call `cudaDeviceReset()` before each benchmark. This ensures that any CUDA state is wiped between runs.
+2. Call `cudaFree(0)` after `cudaDeviceReset()`. This initializes the GPU, ensuring that we don't actidentally time any lazy initialization.
+3. Pin to a single NUMA region or CPU. This ensures that data copies always take a consistent route from CPU to GPU.
 
 ## Building with a gcc that has std::regex
 
