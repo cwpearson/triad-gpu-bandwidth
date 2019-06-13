@@ -11,7 +11,38 @@ Test achievable triad kernel bandwidth using all available CUDA allocation/trans
 
 The basic operation is a host-to-device transfer, followed by the triad kernel, followed by a device-to-host transfer.
 
-The output is a CSV file with columns for the transfer time (zero for implicit transfers), the kernel time, and the total time.
+The output is a CSV file with columns for the transfer time (zero for implicit transfers), the kernel time, and the total time. 
+
+* total time: the time from the start of the first transfer to the end of the last transfer.
+* transfer time: the combined time for the host-to-device and the device-to-host transfers.
+* kernel time: start of the kernel execution to end of the kernel execution
+
+**transfer + kernel may not equal total**, though they should be close.
+
+## Examples
+
+* Run benchmarks on GPU 0 from `n = 1e5; n <= 2.5e8; n *= 1.3`.
+Repeat each benchmark 5 times.
+Pin access and allocations to NUMA node 0.
+Show output on terminal and also pipe to `triad.csv`.
+
+`numactl -p 0 ./triad | tee triad.csv`
+
+* Run only the `pinned` benchmark
+
+./triad --pinned
+
+* Run only n = 1e9
+
+`./triad -n 1e9`
+
+* Run 3 iterations of each benchmark
+
+`./triad -i 3`
+
+* Show all options
+
+`./triad -h`
 
 ## Automatic Testing for Functional System Allocator
 * Forks a child process to test whether CUDA can use the system allocator.
