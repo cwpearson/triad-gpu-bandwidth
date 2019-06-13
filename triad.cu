@@ -286,10 +286,17 @@ int main(int argc, char **argv) {
   std::vector<double> gs;
   std::vector<double> ms;
 
+  double nMin = 1e5;
+  double nMax = 2.5e8;
+  double nFactor = 1.3;
+
   // clang-format off
   options.add_options()
-    ("n,num-iters", "Number of iterations", cxxopts::value(iters))
-    ("no-system-allocator", "Disable system allocator")
+    ("i,num-iters", "Number of iterations", cxxopts::value(iters))
+    ("n","number of vector elements (single vector)", cxxopts::value<double>())
+    ("n-min", "minimum n in sweep", cxxopts::value(nMin)->default_value("1.5e5"))
+    ("n-max", "maximum n in sweep", cxxopts::value(nMax)->default_value("2.5e8"))
+    ("n-factor", "growth of n each run", cxxopts::value(nFactor)->default_value("1.3"))
     ("pinned", "run pinned benchmark")
     ("pageable", "run pageable benchmark")
     ("zero-copy", "run zero-copy benchmark")
@@ -309,11 +316,12 @@ int main(int argc, char **argv) {
     exit(0);
   }
 
-  bool disableSystemAllocator = false;
-  if (result["no-system-allocator"].count()) {
-    disableSystemAllocator = true;
+  if (result["n"].count()) {
+    double n = result["n"].as<double>();
+    nMin = n;
+    nMax = n;
+    nFactor = 2;
   }
-
   
   const bool run_pinned = result["pinned"].as<bool>();
   const bool run_pageable = result["pageable"].as<bool>();
@@ -335,11 +343,12 @@ int main(int argc, char **argv) {
   if (run_system) runAll = false;
 
   // Don't do any CUDA stuff before forking the child
-  if (!disableSystemAllocator) {
+  bool systemAllocatorWorks = true;
+  if (run_system || runAll) {
     bool works = test_system_allocator();
     if (!works) {
       fprintf(stderr, "system allocator did not work. disabling\n");
-      disableSystemAllocator = true;
+      systemAllocatorWorks = false;
     }
   }
 
@@ -360,11 +369,11 @@ int main(int argc, char **argv) {
 
   // runs
   // 3GB => 1GB each => n=250M
-  for (size_t n = 1e5; n <= 2.5e8; n *= 1.3) {
+  for (double n = nMin; n <= nMax; n *= nFactor) {
 
     std::vector<Result> results;
     if (run_system || runAll) {
-    if (!disableSystemAllocator) {
+    if (systemAllocatorWorks) {
       results =
           run_many(iters, std::bind(benchmark_triad<int>, n, SYSTEM, NONE));
       printf("%.2e%s%s", (double)n, sep.c_str(), "system            ");
